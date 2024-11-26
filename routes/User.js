@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs")
 const User = require("../modals/User");
 const verifyToken = require("../middleware/auth")
 const router = express.Router();
-
+ 
 //signup
 router.post('/signup', async(req,res)=> {
     try {
@@ -14,13 +14,11 @@ router.post('/signup', async(req,res)=> {
         const user = new User({ name, email, phone, password: hashPassword, role });
         await user.save();
         res.status(201).send('User created');
-    } catch(error) {
-        console.log("error>>>>>>>", error);
-        
+    } catch(error) {        
         res.status(400).send(error);
-    } 
+    }
 });
-
+ 
 //login
 router.post('/login', async(req,res)=> {
     try {
@@ -33,37 +31,36 @@ router.post('/login', async(req,res)=> {
         res.status(200).send(token);
     } catch(error) {
         res.status(400).send(error);
-    } 
+    }
 });
-
+ 
 //find user details
 router.post('/getDetails',verifyToken, async(req, res)=> {
     try{
         const { id, role } = req.body;
         let userData;
         if(role === "admin"){
-            userData = await User.find({role: 'user'}) 
+            userData = await User.find({role: 'user'}).select('-password');
         }else {
-            userData = await User.findOne({_id: id}) 
+            userData = await User.findOne({_id: id}).select('-password');
         }
-        const structure = destructure(userData)
-        res.status(200).send(structure);
+        res.status(200).send(userData);
     }catch(error){
         res.status(400).send(error)
     }
 });
-
+ 
 //delete user
 router.delete("/delete",verifyToken, async(req, res)=> {
     try{
         const { id } = req.body;
-        const userDelete = await User.findOneAndDelete({_id: id});
-        res.status(200).send(userDelete);
+        await User.findOneAndDelete({_id: id});
+        res.status(200).send("User Deleted");
     }catch(error){
         res.status(400).send(error);
     }
 })
-
+ 
 //update user
 router.put('/update', verifyToken, async (req, res) => {
     try {
@@ -73,19 +70,12 @@ router.put('/update', verifyToken, async (req, res) => {
         if (password) {
             updates.password = await bcrypt.hash(password, 10);
         }
-
+ 
         const updatedUser = await User.findOneAndUpdate({ _id: id }, updates, { new: true });
         res.status(200).send(updatedUser);
     } catch (error) {
         res.status(400).send(error);
     }
-});
-
-const destructure = (userData) => ({
-    name: userData.name,
-    phone: userData.phone,
-    email: userData.email,
-    role: userData.role
 });
 
 module.exports = router;
